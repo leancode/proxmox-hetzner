@@ -34,7 +34,7 @@
 #
 ################################################################################
 # Ensure NVME devices use 4K block size and not 512 block size, can cause problems with some devices
-NVME_FORCE_4K="FALSE"
+NVME_FORCE_4K="TRUE"
 # Will create a new GPT partition table on the install target drives.
 # this will wipe all patition information on the drives
 WIPE_PARTITION_TABLE="TRUE"
@@ -73,7 +73,7 @@ if [ "$OS" == "PBS" ] ; then
   INSTALL_IMAGE="proxmox-pbs.iso"
 else
   if [ ! -f INSTALL_IMAGE="" ] ; then
-     wget "http://download.proxmox.com/iso/proxmox-ve_7.1-2.iso" -c -O proxmox-ve.iso || exit 1
+     wget "https://enterprise.proxmox.com/iso/proxmox-ve_8.0-2.iso" -c -O proxmox-ve.iso || exit 1
   fi
   INSTALL_IMAGE="proxmox-ve.iso"
 fi
@@ -286,8 +286,8 @@ iface lo inet loopback
 
 iface ${MY_IFACE} inet manual
 
-auto vmbr0
-iface vmbr0 inet static
+auto vmbr1
+iface vmbr1 inet static
     address ${MY_IP4_AND_NETMASK}
     gateway ${MY_IP4_GATEWAY}
     bridge_ports ${MY_IFACE}
