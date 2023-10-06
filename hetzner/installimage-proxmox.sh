@@ -40,7 +40,7 @@
 #
 ################################################################################
 # Ensure NVME devices use 4K block size and not 512 block size, can cause problems with some devices
-NVME_FORCE_4K="FALSE"
+NVME_FORCE_4K="TRUE"
 # Will create a new GPT partition table on the install target drives.
 # this will wipe all patition information on the drives
 WIPE_PARTITION_TABLE="TRUE"
@@ -456,12 +456,12 @@ fi
 
 if [ "$OS" == "PBS" ] ; then
   if [ ! -f postinstall_file="/root/pbs" ] ; then
-    wget "https://raw.githubusercontent.com/extremeshok/xshok-proxmox/master/hetzner/pbs" -c -O /root/pbs
+    wget "https://raw.githubusercontent.com/leancode/xshok-proxmox/master/hetzner/pbs" -c -O /root/pbs
   fi
   postinstall_file="/root/pbs"
 else
   if [ ! -f postinstall_file="/root/pve" ] ; then
-    wget "https://raw.githubusercontent.com/extremeshok/xshok-proxmox/master/hetzner/pve" -c -O /root/pve
+    wget "https://raw.githubusercontent.com/leancode/xshok-proxmox/master/hetzner/pve" -c -O /root/pve
   fi
   postinstall_file="/root/pve"
 fi
