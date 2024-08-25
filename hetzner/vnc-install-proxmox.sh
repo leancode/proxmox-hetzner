@@ -68,12 +68,12 @@ MY_DNS_SERVER="$(resolvectl status | grep "Current DNS Server" | cut -d":" -f2 |
 
 if [ "$OS" == "PBS" ] ; then
   if [ ! -f INSTALL_IMAGE="proxmox-pbs.iso" ] ; then
-    wget "http://download.proxmox.com/iso/proxmox-backup-server_2.1-1.iso" -c -O proxmox-pbs.iso || exit 1
+    wget "https://enterprise.proxmox.com/iso/proxmox-backup-server_3.2-1.iso" -c -O proxmox-pbs.iso || exit 1
   fi
   INSTALL_IMAGE="proxmox-pbs.iso"
 else
   if [ ! -f INSTALL_IMAGE="" ] ; then
-     wget "https://enterprise.proxmox.com/iso/proxmox-ve_8.0-2.iso" -c -O proxmox-ve.iso || exit 1
+     wget "https://enterprise.proxmox.com/iso/proxmox-ve_8.2-2.iso" -c -O proxmox-ve.iso || exit 1
   fi
   INSTALL_IMAGE="proxmox-ve.iso"
 fi
