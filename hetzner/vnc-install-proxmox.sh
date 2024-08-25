@@ -256,7 +256,7 @@ echo "********************************"
 
 echo ">> CONNECT VIA VNC TO ${MY_IP4_AND_NETMASK%/*} WITH PASSWORD ${MY_RANDOM_PASS}"
 
-printf "change vnc password\n%s\n" ${MY_RANDOM_PASS} | qemu-system-x86_64 -machine type=q35,accel=kvm -cpu host -enable-kvm -smp 4 -m 4096 -boot d -cdrom ${INSTALL_IMAGE} ${DISKS} -vnc :0,password -monitor stdio -no-reboot
+printf "change vnc password\n%s\n" ${MY_RANDOM_PASS} | qemu-system-x86_64 -machine type=q35,accel=kvm -cpu host -enable-kvm -smp 4 -m 4096 -boot d -cdrom ${INSTALL_IMAGE} ${DISKS} -vnc :0,password=on -monitor stdio -no-reboot
 
 #https://blogs.oracle.com/linux/post/how-to-emulate-block-devices-with-qemu
 
@@ -298,7 +298,7 @@ iface vmbr1 inet static
   echo "export the zfs pool, so the machine will boot correctly "
   echo ">> run the following command below"
   echo "zpool export -f rpool"
-  printf "change vnc password\n%s\n" ${MY_RANDOM_PASS} | qemu-system-x86_64 -enable-kvm -smp 4 -m 4096 $DISKS -vnc :0,password -monitor stdio -no-reboot -serial telnet:localhost:4321,server,nowait
+  printf "change vnc password\n%s\n" ${MY_RANDOM_PASS} | qemu-system-x86_64 -enable-kvm -smp 4 -m 4096 $DISKS -vnc :0,password=on -monitor stdio -no-reboot -serial telnet:localhost:4321,server,nowait
 
 fi
 
