@@ -34,7 +34,7 @@
 #
 ################################################################################
 # Ensure NVME devices use 4K block size and not 512 block size, can cause problems with some devices
-NVME_FORCE_4K="TRUE"
+NVME_FORCE_4K="FALSE"
 # Will create a new GPT partition table on the install target drives.
 # this will wipe all patition information on the drives
 WIPE_PARTITION_TABLE="TRUE"
@@ -68,45 +68,56 @@ MY_DNS_SERVER="$(resolvectl status | grep "Current DNS Server" | cut -d":" -f2 |
 
 if [ "$OS" == "PBS" ] ; then
   if [ ! -f INSTALL_IMAGE="proxmox-pbs.iso" ] ; then
-    wget "https://enterprise.proxmox.com/iso/proxmox-backup-server_3.2-1.iso" -c -O proxmox-pbs.iso || exit 1
+    ISO_VERSION=$(curl -s 'http://download.proxmox.com/iso/' | grep -oP 'proxmox-backup-server_(\d+.\d+-\d).iso' | sort -V | tail -n1)
+    ISO_URL="http://download.proxmox.com/iso/$ISO_VERSION"
+    wget "$ISO_URL" -c -O proxmox-pbs.iso || exit 1
   fi
   INSTALL_IMAGE="proxmox-pbs.iso"
 else
   if [ ! -f INSTALL_IMAGE="" ] ; then
-     wget "https://enterprise.proxmox.com/iso/proxmox-ve_8.2-2.iso" -c -O proxmox-ve.iso || exit 1
+    ISO_VERSION=$(curl -s 'http://download.proxmox.com/iso/' | grep -oP 'proxmox-ve_(\d+.\d+-\d).iso' | sort -V | tail -n1)
+    ISO_URL="http://download.proxmox.com/iso/$ISO_VERSION"
+    wget "$ISO_URL" -c -O proxmox-ve.iso || exit 1
   fi
   INSTALL_IMAGE="proxmox-ve.iso"
 fi
 
 # Generate NVME Device Arrays
-mapfile -t NVME_ARRAY < <( ls -1 /sys/block | grep ^nvme | sort -d )
-NVME_COUNT=${#NVME_ARRAY[@]}
+NVME_ARRAY=$(lsblk -dn -o NAME,SIZE,TYPE -e 1,7,11,14,15 | awk '{print $1}')
+NVME_COUNT=$(echo -n "$NVME_ARRAY" | grep -c $'\n' )
+
 NVME_TARGET=""
-NVME_TARGET_FIRST=""
 NVME_TARGET_COUNT=0
 if [[ $NVME_COUNT -ge 1 ]] ; then
-  for nvme_device in "${NVME_ARRAY[@]}"; do
+  echo "These are your $NVME_COUNT NVME disk(s):"
+  lsblk -dn -o NAME,SIZE,TYPE -e 1,7,11,14,15
+  echo
+  while IFS= read -r LINE; do
+    nvme_device=$(echo "$LINE" | awk '{print $1}')
+    echo Processing $nvme_device....
     if [ "${NVME_FORCE_4K,,}" == "yes" ] || [ "${NVME_FORCE_4K,,}" == "true" ] ; then
       if  [[ $(nvme id-ns "/dev/${nvme_device}" -H | grep "LBA Format" | grep "(in use)" | grep -oP "Data Size\K.*" | cut -d" " -f 2) -ne 4096 ]] ; then
         echo "Appling 4K block size to NVME: ${nvme_device}"
-        nvme format "/dev/${nvme_device}" -b 4096 -f || exit 1
+        nvme format "/dev/${nvme_device}" -b 4096 -f
         sleep 5
         echo "Reset NVME controller: ${nvme_device::-2}"
-        nvme reset "/dev/${nvme_device::-2}" || exit 1
+        nvme reset "/dev/${nvme_device::-2}"
         sleep 5
       fi
     fi
+    echo "Do you want to add $nvme_device to the proxmox install (y/n)? "
+    read -n 1 -s answer < /dev/tty
+    if [[ "$answer" =~ [Yy] ]]; then 
       if [ "${NVME_TARGET}" == "" ] ; then
         NVME_TARGET="${nvme_device}"
-        NVME_TARGET_FIRST="${nvme_device}"
-        NVME_TARGET_COUNT=1
       else
-        if [[ $(grep "${NVME_TARGET_FIRST}" -m1 /proc/partitions | xargs | cut -d" " -f3) -eq $(grep "${nvme_device}" -m1 /proc/partitions | xargs | cut -d" " -f3) ]]; then
-          NVME_TARGET="${NVME_TARGET},${nvme_device}"
-          NVME_TARGET_COUNT=$((NVME_TARGET_COUNT+1))
-        fi
+        NVME_TARGET="${NVME_TARGET},${nvme_device}"
       fi
-  done
+      NVME_TARGET_COUNT=$((NVME_TARGET_COUNT+1))
+    else
+      echo Not adding the drive to the proxmox install
+    fi
+  done <<< "$NVME_ARRAY"
 fi
 
 # Generate SCSI (HDD/SSD) Device Arrays

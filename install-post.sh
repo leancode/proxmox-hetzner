@@ -37,6 +37,8 @@
 # Example to disable to motd
 # export XS_MOTD="no" ; bash install-post.sh
 ###############################
+echo "This is not working on ZFS yet and will not reboot properly. Better to install minimum debian and then use debian12-2-proxmox8.sh"
+exit
 #####  D O   N O T   E D I T   B E L O W  ######
 
 #### VARIABLES / options
@@ -86,7 +88,7 @@ if [ -z "$XS_JOURNALD" ] ; then
 fi
 # Install kernel source headers
 if [ -z "$XS_KERNELHEADERS" ] ; then
-    XS_KERNELHEADERS="yes"
+    XS_KERNELHEADERS="no"
 fi
 # Ensure ksmtuned (ksm-control-daemon) is enabled and optimise according to ram size
 if [ -z "$XS_KSMTUNED" ] ; then
@@ -122,7 +124,7 @@ if [ -z "$XS_MEMORYFIXES" ] ; then
 fi
 # Pretty MOTD BANNER
 if [ -z "$XS_MOTD" ] ; then
-    XS_MOTD="yes"
+    XS_MOTD="no"
 fi
 # Enable Network optimising
 if [ -z "$XS_NET" ] ; then
@@ -150,7 +152,7 @@ if [ -z "$XS_OVHRTM" ] ; then
 fi
 # Set pigz to replace gzip, 2x faster gzip compression
 if [ -z "$XS_PIGZ" ] ; then
-    XS_PIGZ="yes"
+    XS_PIGZ="no"
 fi
 # Bugfix: high swap usage with low memory usage
 if [ -z "$XS_SWAPPINESS" ] ; then
@@ -164,7 +166,7 @@ fi
 if [ -z "$XS_TCPFASTOPEN" ] ; then
     XS_TCPFASTOPEN="yes"
 fi
-# Enable testing proxmox repo
+# Enable Proxmox testing repo
 if [ -z "$XS_TESTREPO" ] ; then
     XS_TESTREPO="no"
 fi
@@ -174,7 +176,7 @@ if [ -z "$XS_TIMESYNC" ] ; then
 fi
 # Set Timezone, empty = set automatically by IP
 if [ -z "$XS_TIMEZONE" ] ; then
-    XS_TIMEZONE=""
+    XS_TIMEZONE="UTC"
 fi
 # Install common system utilities
 if [ -z "$XS_UTILS" ] ; then
@@ -194,7 +196,7 @@ if [ -z "$XS_ZFSAUTOSNAPSHOT" ] ; then
 fi
 # Enable VFIO IOMMU support for PCIE passthrough
 if [ -z "$XS_VFIO_IOMMU" ] ; then
-    XS_VFIO_IOMMU="yes"
+    XS_VFIO_IOMMU="no"
 fi
 #################  D O   N O T   E D I T  ######################################
 
@@ -425,7 +427,7 @@ if [ "${XS_AMDFIXES,,}" == "yes" ] ; then
         echo "options kvm report_ignored_msrs=N" >> /etc/modprobe.d/kvm.conf
 
         echo "Installing kernel 5.15"
-        /usr/bin/env DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::='--force-confdef' install pve-kernel-5.15
+        /usr/bin/env DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::='--force-confdef' install 6.8.12-1-pve
     fi
 fi
 
@@ -434,31 +436,31 @@ if [ "${XS_KERNELHEADERS,,}" == "yes" ] ; then
     /usr/bin/env DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::='--force-confdef' install pve-headers module-assistant
 fi
 
-# if [ "$XS_KEXEC" == "yes" ] ; then
-#     ## Install kexec, allows for quick reboots into the latest updated kernel set as primary in the boot-loader.
-#     # use command 'reboot-quick'
-#     echo "kexec-tools kexec-tools/load_kexec boolean false" | debconf-set-selections
-#     /usr/bin/env DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::='--force-confdef' install kexec-tools
-#     cat <<'EOF' > /etc/systemd/system/kexec-pve.service
-# [Unit]
-# Description=Loading new kernel into memory
-# Documentation=man:kexec(8)
-# DefaultDependencies=no
-# Before=reboot.target
-# RequiresMountsFor=/boot
-# #Before=shutdown.target umount.target final.target
+if [ "$XS_KEXEC" == "yes" ] ; then
+    ## Install kexec, allows for quick reboots into the latest updated kernel set as primary in the boot-loader.
+    # use command 'reboot-quick'
+    echo "kexec-tools kexec-tools/load_kexec boolean false" | debconf-set-selections
+    /usr/bin/env DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::='--force-confdef' install kexec-tools
+    cat <<'EOF' > /etc/systemd/system/kexec-pve.service
+[Unit]
+Description=Loading new kernel into memory
+Documentation=man:kexec(8)
+DefaultDependencies=no
+Before=reboot.target
+RequiresMountsFor=/boot
+#Before=shutdown.target umount.target final.target
 
-# [Service]
-# Type=oneshot
-# RemainAfterExit=yes
-# ExecStart=/sbin/kexec -d -l /boot/pve/vmlinuz --initrd=/boot/pve/initrd.img --reuse-cmdline
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/sbin/kexec -d -l /boot/pve/vmlinuz --initrd=/boot/pve/initrd.img --reuse-cmdline
 
-# [Install]
-# WantedBy=default.target
-# EOF
-#     systemctl enable kexec-pve.service
-#     echo "alias reboot-quick='systemctl kexec'" >> /root/.bash_profile
-# fi
+[Install]
+WantedBy=default.target
+EOF
+    systemctl enable kexec-pve.service
+    echo "alias reboot-quick='systemctl kexec'" >> /root/.bash_profile
+fi
 
 if [ "${XS_DISABLERPC,,}" == "yes" ] ; then
     ## Disable portmapper / rpcbind (security)
@@ -506,7 +508,6 @@ if [ "${XS_PIGZ,,}" == "yes" ] ; then
     /usr/bin/env DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::='--force-confdef' install pigz
     cat  <<EOF > /bin/pigzwrapper
 #!/bin/sh
-# eXtremeSHOK.com
 PATH=/bin:\$PATH
 GZIP="-1"
 exec /usr/bin/pigz "\$@"
@@ -566,7 +567,7 @@ if [ "${XS_NOSUBBANNER,,}" == "yes" ] ; then
       # create a daily cron to make sure the banner does not re-appear
   cat <<'EOF' > /etc/cron.daily/xs-pve-nosub
 #!/bin/sh
-# eXtremeSHOK.com Remove subscription banner
+# Remove subscription banner
 sed -i "s/data.status !== 'Active'/false/g" /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js
 sed -i "s/checked_command: function(orig_cmd) {/checked_command: function() {} || function(orig_cmd) {/g" /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js
 EOF
@@ -592,7 +593,6 @@ fi
 if [ "${XS_KERNELPANIC,,}" == "yes" ] ; then
     # Enable restart on kernel panic
     cat <<EOF > /etc/sysctl.d/99-xs-kernelpanic.conf
-# eXtremeSHOK.com
 # Enable restart on kernel panic, kernel oops and hardlockup
 kernel.core_pattern=/var/crash/core.%t.%p
 # Reboot on kernel panic afetr 10s
@@ -608,7 +608,6 @@ if [ "${XS_LIMITS,,}" == "yes" ] ; then
     ## Increase max user watches
     # BUG FIX : No space left on device
     cat <<EOF > /etc/sysctl.d/99-xs-maxwatches.conf
-# eXtremeSHOK.com
 # Increase max user watches
 fs.inotify.max_user_watches=1048576
 fs.inotify.max_user_instances=1048576
@@ -616,7 +615,6 @@ fs.inotify.max_queued_events=1048576
 EOF
     ## Increase max FD limit / ulimit
     cat <<EOF >> /etc/security/limits.d/99-xs-limits.conf
-# eXtremeSHOK.com
 # Increase max FD limit / ulimit
 * soft     nproc          1048576
 * hard     nproc          1048576
@@ -629,7 +627,6 @@ root hard     nofile         unlimited
 EOF
     ## Increase kernel max Key limit
     cat <<EOF > /etc/sysctl.d/99-xs-maxkeys.conf
-# eXtremeSHOK.com
 # Increase kernel max Key limit
 kernel.keys.root_maxkeys=1000000
 kernel.keys.maxkeys=1000000
@@ -648,7 +645,6 @@ fi
 if [ "${XS_LOGROTATE,,}" == "yes" ] ; then
     ## Optimise logrotate
     cat <<EOF > /etc/logrotate.conf
-# eXtremeSHOK.com
 daily
 su root adm
 rotate 7
@@ -666,7 +662,6 @@ fi
 if [ "${XS_JOURNALD,,}" == "yes" ] ; then
     ## Limit the size and optimise journald
     cat <<EOF > /etc/systemd/journald.conf
-# eXtremeSHOK.com
 [Journal]
 # Store on disk
 Storage=persistent
@@ -703,7 +698,6 @@ if [ "${XS_ENTROPY,,}" == "yes" ] ; then
     /usr/bin/env DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::='--force-confdef' install haveged
     ## Net optimising
     cat <<EOF > /etc/default/haveged
-# eXtremeSHOK.com
 #   -w sets low entropy watermark (in bits)
 DAEMON_ARGS="-w 1024"
 EOF
@@ -720,7 +714,6 @@ fi
 if [ "${XS_MEMORYFIXES,,}" == "yes" ] ; then
     ## Optimise Memory
 cat <<EOF > /etc/sysctl.d/99-xs-memory.conf
-# eXtremeSHOK.com
 # Memory Optimising
 ## Bugfix: reserve 1024MB memory for system
 vm.min_free_kbytes=1048576
@@ -734,7 +727,6 @@ fi
 if [ "${XS_TCPBBR,,}" == "yes" ] ; then
 ## Enable TCP BBR congestion control
 cat <<EOF > /etc/sysctl.d/99-xs-kernel-bbr.conf
-# eXtremeSHOK.com
 # TCP BBR congestion control
 net.core.default_qdisc=fq
 net.ipv4.tcp_congestion_control=bbr
@@ -744,7 +736,6 @@ fi
 if [ "${XS_TCPFASTOPEN,,}" == "yes" ] ; then
 ## Enable TCP fastopen
 cat <<EOF > /etc/sysctl.d/99-xs-tcp-fastopen.conf
-# eXtremeSHOK.com
 # TCP fastopen
 net.ipv4.tcp_fastopen=3
 EOF
@@ -753,7 +744,6 @@ fi
 if [ "${XS_NET,,}" == "yes" ] ; then
 ## Enable Network optimising
 cat <<EOF > /etc/sysctl.d/99-xs-net.conf
-# eXtremeSHOK.com
 net.core.netdev_max_backlog=8192
 net.core.optmem_max=8192
 net.core.rmem_max=16777216
@@ -804,7 +794,6 @@ fi
 if [ "${XS_SWAPPINESS,,}" == "yes" ] ; then
     ## Bugfix: high swap usage with low memory usage
     cat <<EOF > /etc/sysctl.d/99-xs-swap.conf
-# eXtremeSHOK.com
 # Bugfix: high swap usage with low memory usage
 vm.swappiness=10
 EOF
@@ -813,7 +802,6 @@ fi
 if [ "${XS_MAXFS,,}" == "yes" ] ; then
     ## Increase Max FS open files
     cat <<EOF > /etc/sysctl.d/99-xs-fs.conf
-# eXtremeSHOK.com
 # Max FS Optimising
 fs.nr_open=12000000
 fs.file-max=9000000
@@ -858,7 +846,7 @@ if [ "${XS_ZFSARC,,}" == "yes" ] ; then
         MY_ZFS_ARC_MAX=536870912
       fi
       cat <<EOF > /etc/modprobe.d/99-xs-zfsarc.conf
-# eXtremeSHOK.com ZFS tuning
+# ZFS tuning
 
 # Use 1/8 RAM for MAX cache, 1/16 RAM for MIN cache, or 1GB
 options zfs zfs_arc_min=$MY_ZFS_ARC_MIN
@@ -898,7 +886,6 @@ if [ "${XS_VFIO_IOMMU,,}" == "yes" ] ; then
     fi
 
     cat <<EOF >> /etc/modules
-# eXtremeSHOK.com
 vfio
 vfio_iommu_type1
 vfio_pci
@@ -906,7 +893,6 @@ vfio_virqfd
 
 EOF
     cat <<EOF >> /etc/modprobe.d/blacklist.conf
-# eXtremeSHOK.com
 blacklist nouveau
 blacklist lbm-nouveau
 options nouveau modeset=0
@@ -934,4 +920,3 @@ date >> /etc/extremeshok
 
 ## Script Finish
 echo -e '\033[1;33m Finished....please restart the system \033[0m'
-echo "Optimisations by https://eXtremeSHOK.com"
