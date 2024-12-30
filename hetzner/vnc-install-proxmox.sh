@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+echo "This is not working on ZFS yet and will not reboot properly. Better to install minimum debian and then use debian12-2-proxmox8.sh"
+exit
+
 ################################################################################
 # This is property of eXtremeSHOK.com
 # You are free to use, modify and distribute, however you may not remove this notice.

@@ -37,11 +37,15 @@
 # Example to disable to motd
 # export XS_MOTD="no" ; bash install-post.sh
 ###############################
-echo "This is not working on ZFS yet and will not reboot properly. Better to install minimum debian and then use debian12-2-proxmox8.sh"
-exit
+
 #####  D O   N O T   E D I T   B E L O W  ######
 
 #### VARIABLES / options
+
+# Enable fast reboots
+if [ -z "$XS_KEXEC" ] ; then
+    XS_KEXEC="yes"
+fi
 # Detect AMD EPYC and Ryzen CPU and Apply Fixes
 if [ -z "$XS_AMDFIXES" ] ; then
     XS_AMDFIXES="yes"
@@ -259,12 +263,14 @@ fi
 
 # rebuild and add non-free to /etc/apt/sources.list
 cat <<EOF > /etc/apt/sources.list
-deb https://ftp.debian.org/debian ${OS_CODENAME} main contrib
-deb https://ftp.debian.org/debian ${OS_CODENAME}-updates main contrib
-# non-free
-deb https://httpredir.debian.org/debian/ ${OS_CODENAME} main contrib non-free
-# security updates
-deb https://security.debian.org/debian-security ${OS_CODENAME}/updates main contrib
+deb http://deb.debian.org/debian bookworm main contrib non-free-firmware
+#deb-src http://deb.debian.org/debian bookworm main contrib non-free-firmware
+
+deb http://deb.debian.org/debian bookworm-updates main contrib non-free-firmware
+#deb-src http://deb.debian.org/debian bookworm-updates main contrib non-free-firmware
+
+deb http://security.debian.org/debian-security bookworm-security main contrib non-free-firmware
+#deb-src http://security.debian.org/debian-security bookworm-security main contrib non-free-firmware
 EOF
 
 # Refresh the package lists
